@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warranty Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <script>
+    let darkMode = true;
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      darkMode = !darkMode;
+      document.getElementById('themeToggle').innerText = darkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
+    }
+
+    async function addWarranty(event) {
+      event.preventDefault();
+      const data = {
+        productName: document.getElementById("productName").value,
+        purchaseDate: document.getElementById("purchaseDate").value,
+        warrantyMonths: parseInt(document.getElementById("warrantyMonths").value),
+        sellerName: document.getElementById("sellerName").value
+      };
+
+      const res = await fetch("http://localhost:8080/warranty/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        alert("✅ Added! Expiry: " + result.expiryDate);
+        document.getElementById("warrantyForm").reset();
+        loadWarranties();
+      } else {
+        alert("❌ Failed to add");
+      }
+    }
+
+    async function deleteWarranty(id) {
+      if (!confirm("Delete this warranty?")) return;
+      await fetch(`http://localhost:8080/warranty/${id}`, { method: "DELETE" });
+      alert("🗑️ Deleted");
+      loadWarranties();
+    }
+
+    async function loadWarranties(filter = "all") {
+      const res = await fetch(`http://localhost:8080/warranty/${filter}`);
+      const data = await res.json();
+      const tbody = document.getElementById("warrantyTableBody");
+      tbody.innerHTML = "";
+      data.forEach((w, i) => {
+        tbody.innerHTML += `
+          <tr class='bg-white dark:bg-gray-900 hover:bg-purple-50 dark:hover:bg-gray-800 transition-all'>
+            <td class='p-2'>${i + 1}</td>
+            <td class='p-2'>${w.productName}</td>
+            <td class='p-2'>${w.purchaseDate}</td>
+            <td class='p-2'>${w.warrantyMonths}</td>
+            <td class='p-2'>${w.expiryDate}</td>
+            <td class='p-2'>${w.sellerName}</td>
+            <td class='p-2 text-center'>
+              <button onclick="deleteWarranty(${w.id})" class='bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition'>🗑️</button>
+            </td>
+          </tr>`;
+      });
+    }
+
+    window.onload = () => loadWarranties();
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      background-size: 400% 400%;
+      animation: lightWave 15s ease infinite;
+    }
+    .dark body {
+      background: linear-gradient(135deg, #1e3a8a, #0f172a);
+      background-size: 400% 400%;
+      animation: darkWave 15s ease infinite;
+    }
+    @keyframes lightWave {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes darkWave {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  </style>
+</head>
+<body class="min-h-screen py-10 px-4 text-gray-800 dark:text-gray-200">
+<div class="max-w-6xl mx-auto bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-2xl p-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-4xl font-bold text-indigo-700 dark:text-indigo-300 animate-pulse">📦 Warranty Manager</h1>
+    <button id="themeToggle" onclick="toggleTheme()" class="text-sm bg-gray-300 dark:bg-gray-700 text-black dark:text-white px-3 py-1 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition">🌙 Dark Mode</button>
+  </div>
+
+  <form id="warrantyForm" onsubmit="addWarranty(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <input id="productName" required placeholder="Product Name" class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-900">
+    <input type="date" id="purchaseDate" required class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-900">
+    <input type="number" id="warrantyMonths" required placeholder="Warranty Months" class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-900">
+    <input id="sellerName" required placeholder="Seller Name" class="p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-900">
+    <div class="col-span-1 md:col-span-2">
+      <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-500 text-white py-3 rounded-xl text-lg font-semibold hover:from-purple-600 hover:to-indigo-500 transition-all">➕ Add Warranty</button>
+    </div>
+  </form>
+
+  <div class="flex justify-between items-center mt-10">
+    <h2 class="text-2xl font-semibold">📋 Warranty List</h2>
+    <select onchange="loadWarranties(this.value)" class="p-2 rounded border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700">
+      <option value="all">All</option>
+      <option value="active">Active</option>
+      <option value="expired">Expired</option>
+      <option value="expiring-soon">Expiring Soon</option>
+    </select>
+  </div>
+
+  <div class="overflow-x-auto mt-6">
+    <table class="w-full text-left border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <thead class="bg-gray-200 dark:bg-gray-700">
+      <tr>
+        <th class="p-3">#</th>
+        <th class="p-3">Product</th>
+        <th class="p-3">Purchase</th>
+        <th class="p-3">Months</th>
+        <th class="p-3">Expiry</th>
+        <th class="p-3">Seller</th>
+        <th class="p-3 text-center">Action</th>
+      </tr>
+      </thead>
+      <tbody id="warrantyTableBody"></tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>
